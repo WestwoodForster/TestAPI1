@@ -29,5 +29,11 @@ namespace TestAPI1.Controllers
             })
             .ToArray();
         }
+
+        [HttpGet("HelloWorld")]
+        public IActionResult HelloWorld()
+        {
+            return Ok("Hello, World!");
+        }
     }
 }
