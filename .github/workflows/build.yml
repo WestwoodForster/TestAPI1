@@ -2,7 +2,7 @@ name: Build and Promote Release
 
 on:
   release:
-    types: [published]
+    types: [published, created]
   workflow_dispatch: # Allows manual trigger if needed
 
 jobs:
