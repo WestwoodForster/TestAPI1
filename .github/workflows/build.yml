@@ -8,19 +8,20 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
 
     steps:
     - name: Checkout Code
       uses: actions/checkout@v4
 
-    - name: Setup .NET SDK
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: '8.0.x' # Adjust to 6.0.x, 7.0.x, or 9.0.x if targeting a different version
+    - name: Setup NuGet
+      uses: NuGet/setup-nuget@v2
 
-    - name: Restore Dependencies
-      run: dotnet restore
+    - name: Setup MSBuild
+      uses: microsoft/setup-msbuild@v2
+      
+    - name: Restore NuGet Packages
+      run: nuget restore TestAPI1.sln
 
     - name: Build Project
-      run: dotnet build --no-restore --configuration Release
+      run: msbuild TestAPI1.sln /p:Configuration=Release /p:Platform="Any CPU"
