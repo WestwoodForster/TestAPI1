@@ -1,10 +1,13 @@
-name: Build .NET Project
+name: Build and Deploy TestAPI1
 
 on:
   push:
     branches: [ "main", "master" ]
   pull_request:
     branches: [ "main", "master" ]
+
+env:
+  AZURE_WEBAPP_NAME: 'TestAPI1'
 
 jobs:
   build:
@@ -19,9 +22,46 @@ jobs:
 
     - name: Setup MSBuild
       uses: microsoft/setup-msbuild@v2
-      
+
     - name: Restore NuGet Packages
       run: nuget restore TestAPI1.sln
 
-    - name: Build Project
-      run: msbuild TestAPI1.sln /p:Configuration=Release /p:Platform="Any CPU"
+    # Build and publish package using MSBuild WebPublish
+    - name: Build and Package Web App
+      run: |
+        msbuild TestAPI1.sln /p:Configuration=Release `
+          /p:DeployOnBuild=true `
+          /p:DeployDefaultTarget=WebPublish `
+          /p:WebPublishMethod=FileSystem `
+          /p:PublishUrl="${{ github.workspace }}\publish"
+
+    # Zip the published site assets
+    - name: Compress Publish Output
+      run: |
+        Compress-Archive -Path "${{ github.workspace }}\publish\*" -DestinationPath "${{ github.workspace }}\TestAPI1-package.zip"
+
+    # Save the deployment zip as a GitHub run artifact
+    - name: Upload Build Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: TestAPI1-package
+        path: "${{ github.workspace }}/TestAPI1-package.zip"
+
+  deploy:
+    runs-on: windows-latest
+    needs: build
+    # Only run deployment when code is pushed to main or master branch
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+
+    steps:
+    - name: Download Artifact from Build Job
+      uses: actions/download-artifact@v4
+      with:
+        name: TestAPI1-package
+
+    - name: Deploy to Azure Web App
+      uses: azure/webapps-deploy@v3
+      with:
+        app-name: ${{ env.AZURE_WEBAPP_NAME }}
+        publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+        package: './TestAPI1-package.zip'
